@@ -83,16 +83,16 @@
             
             var domainMax = 0;
             
-            getCancerStudies();
+            getCancerStudies(function() {
+                root = geneTree;
+                root.x0 = height / 2;
+                root.y0 = 0;
+                geneTree["name"] = "";
+                update(root);
+                
+                renderGenes("ov_tcga", ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"], 5);
+            });
             
-            root = geneTree;
-            root.x0 = height / 2;
-            root.y0 = 0;
-            geneTree["name"] = "Ovarian Serous Cystadenocarcinoma (TCGA, Provisional)";
-            update(root);
-            
-            
-            renderGenes("ov_tcga", ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"], 5);
             
             function getCancerStudies(callback) {
 
@@ -111,6 +111,9 @@
             function renderGenes(id, genes, num) {
                 geneTree["children"] = [];
                 geneTree["allgenes"] = [];
+                geneTree["name"] = studyMap[id].name;
+                
+                console.log(studyMap[id].name);
                 
                 setTimeout( function() {
                     getMutationData(id, genes, function() {
@@ -220,7 +223,7 @@
                 .attr("r", 1e-6)
                 .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
 
-                nodeEnter.append("foreignObject")
+                var nodeLabel = nodeEnter.append("foreignObject")
                 .attr("class", "foreignObject")
                 .attr("width", "8em")
                 .attr("height", "2em")
@@ -229,15 +232,23 @@
                 .append("xhtml:body")
                 .attr("class", "labelbody")
                 .append("div")
-                .attr("class", "label")
+                .attr("class", "label");
+                
+                nodeLabel.append("span")
+                .attr("class", "name")
                 .text(function(d) {
                     return d.name + " ";
                 })
-                .attr("text-anchor", "middle")
-                .append("span")
+                .attr("text-anchor", "middle");
+                
+                nodeLabel.append("span")
                 .attr("class", "size")
                 .text(function(d) {
-                    return d.size;
+                    if(d.size) {
+                        return d.size;
+                    } else {
+                        return ""
+                    }
                 });
 
                 // Transition nodes to their new position.
@@ -254,6 +265,19 @@
                     }
                 })
                 .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+                
+                nodeUpdate.select(".label .name")
+                .text(function(d) {
+                    return d.name + " ";
+                });
+                nodeUpdate.select(".label .size")
+                .text(function(d) {
+                    if(d.size) {
+                        return d.size;
+                    } else {
+                        return ""
+                    }
+                });
 
 //                nodeUpdate.select("foreignObject").classed("active", true);
 
