@@ -131,7 +131,7 @@
                 renderGenes("ov_tcga", ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"], 5);
             });
             
-            var c3;
+            var chart;
             
             var fuzzyStudies = FuzzySet();
             
@@ -180,34 +180,40 @@
                 renderGenes(invStudyMap[fuzzyStudies.get(name)[0][1]].cancer_study_id, genes, num);
             }
             
-            function renderGraph(id, genes, dependent, independent, num) {
-                
-                var totalAlive = lClinicalArray.length,
-                    persistAlive;
-                for (i = 0; i < totalAlive; i++) {
-                    if(lClinicalArray[i] > 0) {
-                        persistAlive = i + 1;
-                        console.log("once");
-                        break;
+            function updateGraph(id, gene) {
+//                for(id in 
+            }
+            
+            function renderGraph(id, genes, dependent, independent, yaxis, xaxis) {
+                if (dependent === "alive" && independent === "time") {
+                    var totalAlive = lClinicalArray.length,
+                        persistAlive;
+                    for (i = 0; i < totalAlive; i++) {
+                        if(lClinicalArray[i] > 0) {
+                            persistAlive = i + 1;
+                            console.log("once");
+                            break;
+                        }
+                    }
+
+                    var allX = ["all_x", 0],
+                        allY = ["all", totalAlive],
+                        currentAlive = totalAlive;
+
+                    for (i = persistAlive; i < totalAlive; i++) {
+                        allX.push(lClinicalArray[i]);
+                        allY.push(currentAlive);
+                        currentAlive--;
                     }
                 }
                 
-                var allX = ["all_x", 0],
-                    allY = ["all", totalAlive],
-                    currentAlive = totalAlive;
-                
-                for (i = persistAlive; i < totalAlive; i++) {
-                    allX.push(lClinicalArray[i]);
-                    allY.push(currentAlive);
-                    currentAlive--;
+                if(chart){
+                    if(chart.destroy) {
+                        chart.destroy();
+                    }
                 }
                 
-                
-                for(i = 0; i < length; i++) {
-                    
-                }
-                
-                c3 = c3.generate({
+                chart = c3.generate({
                     bindto: '.chart',
                     data: {
                         xs: {
@@ -221,13 +227,13 @@
                     },
                     axis: {
                         x: {
-                            label: 'Time (days)',
+                            label: xaxis,
                             tick: {
                                 fit: false
                             }
                         },
                         y: {
-                            label: 'Survivors'
+                            label: yaxis
                         }
                     }
                 });
@@ -257,7 +263,7 @@
                         
                         update(root);
                         
-                        renderGraph(id, genes, num);
+                        renderGraph(id, genes, "alive", "time", "Patients Alive","Time After Diagnoses (days)");
                         
 //                        console.log("complete!");
                     }, addGeneNode);
