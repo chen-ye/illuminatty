@@ -206,8 +206,8 @@
                         }
                     }
 
-                    var selectedX = ["Selected_x", 0],
-                        selectedY = ["Selected", totalAlive],
+                    var selectedX = [gene + "_x", 0],
+                        selectedY = [gene, totalAlive],
                         currentAlive = totalAlive;
 
                     for (i = persistAlive; i < totalAlive; i++) {
@@ -218,20 +218,18 @@
                     console.log(selectedX, selectedY);
                     
                     chart.unload({
-                        ids: 'Selected'
+                        ids: gene
                     });
                     
+                    var xsObj = {};
+                    xsObj[gene] = gene + "_x";
+                    
                     chart.load({
-                        xs: {
-                            Selected: "Selected_x"
-                        },
+                        xs: xsObj,
                         columns: [
                             selectedX,
                             selectedY
-                        ],
-                        names: {
-                            selected: gene
-                        }
+                        ]
                     }, 1000);
                 }
                 
@@ -530,7 +528,15 @@
             // Toggle children on click.
             function click(d) {
                 if (d.gene) {
-                    updateGraph("", d.name, "alive", "time") 
+                    if(d.active) {
+                        d["active"] = false;
+                        chart.unload({
+                            ids: d.name
+                        });
+                    } else {
+                        d["active"] = true;
+                        updateGraph("", d.name, "alive", "time");
+                    }
                 }
                 else if (d.children) {
                     d._children = d.children;
