@@ -99,6 +99,7 @@
             <div class="chart"></div>
         </div>
         <script>
+            var state = {};
             var margin = {top: 20, right: 120, bottom: 20, left: 120},
                 width = 960 - margin.right - margin.left,
                 height = 800 - margin.top - margin.bottom;
@@ -142,7 +143,10 @@
                 geneTree["name"] = "";
                 update(root);
                 
-                renderGenes("ov_tcga", ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"], 5);
+                state.id = "ov_tcga";
+                state.genes = ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"];
+                state.nGenes = 5;
+                renderGenes(state.id, state.genes, state.nGenes);
             });
             
             var chart;
@@ -191,7 +195,8 @@
             }
             
             function renderFuzzyGenes(name, genes, num) {
-                renderGenes(invStudyMap[fuzzyStudies.get(name)[0][1]].cancer_study_id, genes, num);
+                state.id = invStudyMap[fuzzyStudies.get(name)[0][1]].cancer_study_id;
+                renderGenes(state.id, genes, num);
             }
             
             function updateGraph(id, gene, dependent, independent) {
