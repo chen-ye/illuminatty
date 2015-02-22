@@ -2,7 +2,8 @@
 <html>
     <head>
         <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
-        <script src="http://underscorejs.org/underscore-min.js"></script>
+<!--        <script src="http://underscorejs.org/underscore-min.js"></script>-->
+        <script src="js/fuzzyset.js"></script>
         <style>
 
             .node {
@@ -78,6 +79,7 @@
                 .range([0, 30]);
             
             var studyMap = {},
+                invStudyMap = {},
                 geneMap = {},
                 geneTree = {};
             
@@ -93,6 +95,8 @@
                 renderGenes("ov_tcga", ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"], 5);
             });
             
+            var fuzzyStudies = FuzzySet();
+            
             
             function getCancerStudies(callback) {
 
@@ -101,11 +105,17 @@
                 d3.tsv(url, function(data) {
                     for(prop in data) {
                         studyMap[data[prop].cancer_study_id] = data[prop];
+                        invStudyMap[data[prop].name] = data[prop];
+                        fuzzyStudies.add(data[prop].name);
                     }
                     if(callback) {
                         callback();
                     }
                 });
+            }
+            
+            function renderFuzzyGenes(name, genes, num) {
+                renderGenes(invStudyMap[fuzzyStudies.get(name)[0][1]].cancer_study_id, genes, num);
             }
             
             function renderGenes(id, genes, num) {
@@ -131,7 +141,7 @@
                         update(root);
                         console.log("complete!");
                     }, addGeneNode);
-                }, 100);    
+                }, 500);    
             } 
             
             function addGeneNode(id, gene) {
@@ -205,7 +215,7 @@
                     links = tree.links(nodes);
 
                 // Normalize for fixed-depth.
-                nodes.forEach(function(d) { d.y = d.depth * 180; });
+                nodes.forEach(function(d) { d.y = d.depth * 300; });
 
                 // Update the nodes…
                 var node = svg.selectAll("g.node")
@@ -225,7 +235,7 @@
 
                 var nodeLabel = nodeEnter.append("foreignObject")
                 .attr("class", "foreignObject")
-                .attr("width", "8em")
+                .attr("width", "14em")
                 .attr("height", "2em")
                 .attr("y", "-1em")
                 .attr("x", "2em")
@@ -236,6 +246,9 @@
                 
                 nodeLabel.append("span")
                 .attr("class", "name")
+                .attr("title", function(d) {
+                    return d.name;
+                })
                 .text(function(d) {
                     return d.name + " ";
                 })
@@ -267,6 +280,9 @@
                 .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
                 
                 nodeUpdate.select(".label .name")
+                .attr("title", function(d) {
+                    return d.name;
+                })
                 .text(function(d) {
                     return d.name + " ";
                 });
