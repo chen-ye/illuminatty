@@ -4,11 +4,43 @@
   <head>
     <link rel="stylesheet" href="microphone/microphone.min.css">
   </head>
+  <style>
+  .godBox {
+    width: 50%;
+    padding: 2%;
+    border-radius: 10px;
+    margin: 24%;
+    font-size: 160%;
+    outline: none;
+    border: 2px black solid;
+    /*background-color: rgba(0,0,0,0.3);*/
+    color: black;
+    text-align: center;
+ }
+
+
+
+  </style>
   <body style="text-align: center;">
-    <center><div id="microphone"></div></center>
+    <rcenter><div id="microphone"></div></center>
+   <!--  <form id="searchForm" action="javascript:search();">
+        <input placeholder="Type or say search query and press enter" name="command" method="post" class="godBox"/>
+      </form> -->
+      <form id="searchForm" action="javascript:search();">
+   <div class="input-group">
+      <!-- <button id="go" class="btn btn-default" type="button" 
+              onclick="document.getElementById('searchForm').submit(); return false;">
+      </button> -->
+      <input type="text" id="searchItem" class="godBox" placeholder="Search....">
+   </div>
+</form>
     <pre id="result"></pre>
     <div id="info"></div>
     <div id="error"></div>
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+     <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<!--        <script src="http://underscorejs.org/underscore-min.js"></script>-->
+        <script src="js/fuzzyset.js"></script>
     <script src="microphone/microphone.min.js"></script>
     <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 <!--        <script src="http://underscorejs.org/underscore-min.js"></script>-->
@@ -18,6 +50,7 @@
       var mic = new Wit.Microphone(document.getElementById("microphone"));
       var info = function (msg) {
         document.getElementById("info").innerHTML = msg;
+
       };
       var error = function (msg) {
         document.getElementById("error").innerHTML = msg;
@@ -32,11 +65,28 @@
       mic.onaudioend = function () {
         info("Recording stopped, processing started");
       };
+
       mic.onresult = function (intent, entities) {
+
+
+        var a = (intent);
+
+        if (a == "Most_mutated_genes") {
+          console.log("It worked!!");
+        }
+        else {
+          console.log("hahah i am gr88");
+        }
+
         var r = kv("intent", intent);
+
+
+        getMutationDatum(1, entities, "cancer");
+      
 
         for (var k in entities) {
           var e = entities[k];
+          
 
           if (!(e instanceof Array)) {
             r += kv(k, e.value);
@@ -64,12 +114,19 @@
       // mic.start();
       // mic.stop();
 
+
+
+
       function kv (k, v) {
         if (toString.call(v) !== "[object String]") {
+        
           v = JSON.stringify(v);
+          console.log(v);
+
         }
         return k + "=" + v + "\n";
       }
+<<<<<<< HEAD
       function getIntent(str){
         var x = str.indexOf('\n');
         var intent = str.slice(7,x);
@@ -95,6 +152,74 @@
         return "none"
         }
       }  
+=======
+      function determine() {
+        console.log(r);
+        if (r == "Most_mutated_genes") {
+          console.log("kasi kek");
+        }
+      }
+      function getMutationDatum(id, gene, callback) {
+
+                var url = "http://www.cbioportal.org/webservice.do?cmd=getMutationData&genetic_profile_id=" + id + "_mutations&gene_list=" + gene;
+
+                d3.xhr(url).get(function (err, response) {
+                    var dirtyTSV = response.responseText;
+                    var cleanTSV = dirtyTSV.split('\n').slice(1).join('\n');
+
+
+
+                    console.log(d3.tsv.parse(cleanTSV));
+                    
+                    // console.log(gene, geneMap[gene].length);
+
+                   
+                    
+                    // if(callback) {
+                    //     callback(id, gene);
+                    // }
+                })
+                
+                
+                
+                
+            }
+
+function search() {
+ 
+   var name = document.getElementById("searchForm").elements["searchItem"].value;
+   var pattern = name.toLowerCase();
+   var targetId = "";
+  console.log(name);
+
+   // Wit.captureTextIntent("AMMERMEZ4POS4KYONY6E45OSSPAXA555", "Most mutated genes", function (err, res) {
+   //  console.log("Response from Wit for text input: ");
+   //  if (err) console.log("Error: ", err);
+   //    console.log(JSON.stringify(res, null, " "));
+   //  });
+
+$.ajax({
+  url: 'https://api.wit.ai/message?v=20150222',
+  data: {
+    'q':pattern,
+    'access_token': 'AMMERMEZ4POS4KYONY6E45OSSPAXA555'
+  },
+  dataType: 'jsonp',
+  method: 'GET',
+  success: function(response) {
+      console.log(response);
+  }
+});
+
+
+   
+}
+
+
+
+
+
+>>>>>>> e3f68a35e69c5536d9b0e090f20e2076762ab510
 
     </script>
   </body>

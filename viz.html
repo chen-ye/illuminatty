@@ -1,11 +1,18 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <link href="c3/c3.min.css" type="text/css">
         <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+        <script src="c3/c3.js"></script>
 <!--        <script src="http://underscorejs.org/underscore-min.js"></script>-->
         <script src="js/fuzzyset.js"></script>
         <style>
 
+            body, html {
+                margin: 0;
+                font-family: "Avenir", sans-serif;
+                font-weight: 300;
+            }
             .node {
                 cursor: pointer;
                 -webkit-animation: fadein 2s;
@@ -22,9 +29,7 @@
 
             .node .label {
                 font: 1em;
-                font-family: "Avenir", sans-serif;
                 line-height: 2em;
-                font-weight: 300;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -49,11 +54,36 @@
                 from {opacity: 0}
                 to {opacity: 1}
             }
+            
+            .chart_container {
+                position: absolute;
+                top: 0;
+                width: 50%;
+                right: 0;
+                height: 100%;
+            }
+            
+            .chart {
+                height: 100%
+            }
 
+            .c3-legend-item {
+            }
+            
+            .c3-line {
+                fill-opacity: 0
+            }
+            
+            .domain {
+            }
+                
         </style>
     </head>
     <body>
-        <svg class="chart"></svg>
+        <svg class="tree"></svg>
+        <div class="chart_container">
+            <div class="chart"></div>
+        </div>
         <script>
             var margin = {top: 20, right: 120, bottom: 20, left: 120},
                 width = 960 - margin.right - margin.left,
@@ -69,7 +99,7 @@
             var diagonal = d3.svg.diagonal()
                 .projection(function(d) { return [d.y, d.x]; });
             
-            var svg = d3.select("svg")
+            var svg = d3.select(".tree")
                 .attr("width", width + margin.right + margin.left)
                 .attr("height", height + margin.top + margin.bottom)
                 .append("g")
@@ -93,6 +123,16 @@
                 update(root);
                 
                 renderGenes("ov_tcga", ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"], 5);
+            });
+            
+            var c3 = c3.generate({
+                bindto: '.chart',
+                data: {
+                    columns: [
+                        ['data1', 30, 200, 100, 400, 150, 250],
+                        ['data2', 50, 20, 10, 40, 15, 25]
+                    ]
+                }
             });
             
             var fuzzyStudies = FuzzySet();
@@ -123,7 +163,7 @@
                 geneTree["allgenes"] = [];
                 geneTree["name"] = studyMap[id].name;
                 
-                console.log(studyMap[id].name);
+//                console.log(studyMap[id].name);
                 
                 setTimeout( function() {
                     getMutationData(id, genes, function() {
@@ -139,7 +179,7 @@
                         }
                         
                         update(root);
-                        console.log("complete!");
+//                        console.log("complete!");
                     }, addGeneNode);
                 }, 500);    
             } 
@@ -175,7 +215,7 @@
 
                     geneMap[gene] = d3.tsv.parse(cleanTSV);
                     
-                    console.log(gene, geneMap[gene].length);
+//                    console.log(gene, geneMap[gene].length);
                     if(callback) {
                         callback(id, gene);
                     }
