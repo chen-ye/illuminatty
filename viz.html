@@ -145,7 +145,7 @@
                         if(data[prop].DAYS_TO_DEATH !== "") {
                             lClinicalArray.push(+Number(data[prop].DAYS_TO_DEATH));
                         } else {
-                            lClinicalArray.push(-1)
+                            lClinicalArray.push(-1);
                         }
                     }
                     lClinicalArray.sort(sortNumber);
@@ -180,8 +180,61 @@
                 renderGenes(invStudyMap[fuzzyStudies.get(name)[0][1]].cancer_study_id, genes, num);
             }
             
-            function updateGraph(id, gene) {
-//                for(id in 
+            function updateGraph(id, gene, dependent, independent) {
+                var geneArr = geneMap[gene],
+                    lGeneArr = [];
+                
+                console.log(geneArr);
+                
+                for(i in geneArr) {
+                    var d2d = clinicalMap[geneArr[i].case_id].DAYS_TO_DEATH;
+                    if(d2d !== "") {
+                        lGeneArr.push(+Number(d2d));
+                    } else {
+                        lGeneArr.push(-1);
+                    }
+                }
+                lGeneArr.sort(sortNumber);
+                
+                if (dependent === "alive" && independent === "time") {
+                    var totalAlive = lGeneArr.length,
+                        persistAlive;
+                    for (i = 0; i < totalAlive; i++) {
+                        if(lGeneArr[i] > 0) {
+                            persistAlive = i + 1;
+                            break;
+                        }
+                    }
+
+                    var selectedX = ["Selected_x", 0],
+                        selectedY = ["Selected", totalAlive],
+                        currentAlive = totalAlive;
+
+                    for (i = persistAlive; i < totalAlive; i++) {
+                        selectedX.push(lGeneArr[i]);
+                        selectedY.push(currentAlive);
+                        currentAlive--;
+                    }
+                    console.log(selectedX, selectedY);
+                    
+                    chart.unload({
+                        ids: 'Selected'
+                    });
+                    
+                    chart.load({
+                        xs: {
+                            Selected: "Selected_x"
+                        },
+                        columns: [
+                            selectedX,
+                            selectedY
+                        ],
+                        names: {
+                            selected: gene
+                        }
+                    }, 1000);
+                }
+                
             }
             
             function renderGraph(id, genes, dependent, independent, yaxis, xaxis) {
@@ -191,13 +244,12 @@
                     for (i = 0; i < totalAlive; i++) {
                         if(lClinicalArray[i] > 0) {
                             persistAlive = i + 1;
-                            console.log("once");
                             break;
                         }
                     }
 
-                    var allX = ["all_x", 0],
-                        allY = ["all", totalAlive],
+                    var allX = ["All_x", 0],
+                        allY = ["All", totalAlive],
                         currentAlive = totalAlive;
 
                     for (i = persistAlive; i < totalAlive; i++) {
@@ -217,7 +269,7 @@
                     bindto: '.chart',
                     data: {
                         xs: {
-                            all: 'all_x',
+                            All: 'All_x'
                         },
                         columns: [
                             allX,
@@ -277,6 +329,7 @@
                         "children": [],
                         "size": geneMap[gene].length
                     };
+                    geneBranch["gene"] = true;
                     if (geneBranch["size"] > domainMax) {
                         x.domain([0, geneBranch["size"]]);
                         domainMax = geneBranch["size"];
@@ -351,7 +404,13 @@
 
                 // Enter any new nodes at the parent's previous position.
                 var nodeEnter = node.enter().append("g")
-                .attr("class", "node")
+                .attr("class", function(d) { 
+                    if (d.gene) {
+                        return "node gene"
+                    } else {
+                        return "node"
+                    }
+                })
                 .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
                 .on("click", click);
 
@@ -470,7 +529,10 @@
 
             // Toggle children on click.
             function click(d) {
-                if (d.children) {
+                if (d.gene) {
+                    updateGraph("", d.name, "alive", "time") 
+                }
+                else if (d.children) {
                     d._children = d.children;
                     d.children = null;
                 } else {
