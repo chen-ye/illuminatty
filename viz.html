@@ -76,6 +76,20 @@
             
             .domain {
             }
+            
+            .gene circle {
+                fill-opacity: 0 !important;
+                fill: steelblue !important;
+                transition: stroke-width .2s fill-opacity .2s;
+            }
+            
+            .gene:hover circle {
+                stroke-width: 4px;
+            }
+            
+            .gene.active circle {
+                fill-opacity: 1 !important;
+            }
                 
         </style>
     </head>
@@ -184,8 +198,6 @@
                 var geneArr = geneMap[gene],
                     lGeneArr = [];
                 
-                console.log(geneArr);
-                
                 for(i in geneArr) {
                     var d2d = clinicalMap[geneArr[i].case_id].DAYS_TO_DEATH;
                     if(d2d !== "") {
@@ -207,15 +219,14 @@
                     }
 
                     var selectedX = [gene + "_x", 0],
-                        selectedY = [gene, totalAlive],
+                        selectedY = [gene, 100],
                         currentAlive = totalAlive;
 
                     for (i = persistAlive; i < totalAlive; i++) {
                         selectedX.push(lGeneArr[i]);
-                        selectedY.push(currentAlive);
+                        selectedY.push(currentAlive/totalAlive * 100);
                         currentAlive--;
                     }
-                    console.log(selectedX, selectedY);
                     
                     chart.unload({
                         ids: gene
@@ -247,12 +258,12 @@
                     }
 
                     var allX = ["All_x", 0],
-                        allY = ["All", totalAlive],
+                        allY = ["All", 100],
                         currentAlive = totalAlive;
 
                     for (i = persistAlive; i < totalAlive; i++) {
                         allX.push(lClinicalArray[i]);
-                        allY.push(currentAlive);
+                        allY.push(currentAlive/totalAlive * 100);
                         currentAlive--;
                     }
                 }
@@ -295,7 +306,6 @@
                 geneTree["name"] = studyMap[id].name;
                 
                 getClinicalData(id, function() {
-                    console.log("clinical");
                 }) 
                 
                 setTimeout( function() {
@@ -526,14 +536,17 @@
             }
 
             // Toggle children on click.
-            function click(d) {
+            function click(d, e) {
+                console.log(d);
                 if (d.gene) {
                     if(d.active) {
+                        d3.select(this).classed("active", false);
                         d["active"] = false;
                         chart.unload({
                             ids: d.name
                         });
                     } else {
+                        d3.select(this).classed("active", true);
                         d["active"] = true;
                         updateGraph("", d.name, "alive", "time");
                     }
