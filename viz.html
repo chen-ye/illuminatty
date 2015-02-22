@@ -2,36 +2,100 @@
 <html>
     <head>
         <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+        <script src="http://underscorejs.org/underscore-min.js"></script>
         <style>
-            .chart rect {
-                fill: steelblue;
+
+            .node {
+                cursor: pointer;
             }
 
-            .chart text {
-                fill: white;
-                font: 10px sans-serif;
-                text-anchor: end;
+            .node circle {
+                fill: #fff;
+                stroke: steelblue;
+                stroke-width: 1.5px;
             }
+
+            .node text {
+                font: 10px sans-serif;
+            }
+
+            .link {
+                fill: none;
+/*                stroke: #ccc;*/
+/*                stroke-width: 1.5px;*/
+            }
+
         </style>
     </head>
     <body>
         <svg class="chart"></svg>
         <script>
-            var width = 420,
-                barHeight = 20;
+            var margin = {top: 20, right: 120, bottom: 20, left: 120},
+                width = 960 - margin.right - margin.left,
+                height = 800 - margin.top - margin.bottom;
             
-            var geneMap = {};
+            var i = 0,
+                duration = 750,
+                root;
             
-            getMutationData("ov_tcga_mutations", ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1"], function() {
-                console.log("complete!")
-            });
+            var tree = d3.layout.tree()
+                .size([height, width]);
+            
+            var diagonal = d3.svg.diagonal()
+                .projection(function(d) { return [d.y, d.x]; });
+            
+            var svg = d3.select("svg")
+                .attr("width", width + margin.right + margin.left)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+            
+            var x = d3.scale.linear()
+                .range([0, 30]);
+            
+            var geneMap = {},
+                geneTree = {};
+            
+            var domainMax = 0;
+            
+            
+            root = geneTree;
+            root.x0 = height / 2;
+            root.y0 = 0;
+            geneTree["name"] = "Ovarian Serous Cystadenocarcinoma (TCGA, Provisional)";
+            update(root);
+            geneTree["children"] = [];
+            
+            getMutationData("ov_tcga_mutations", ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"], function() {
+                x.domain([0, d3.max(geneTree["children"], function(d) { return d.size; })]);
+                
+                geneTree["children"].sort(function(a, b) {
+                    return b["size"] - a["size"];
+                });
+                update(root);
+                console.log("complete!");
+            }, addGeneNode);
+            
+            function addGeneNode(id, gene) {
+                if(gene) {
+                    var geneBranch = {
+                        "name": gene,
+                        "children": [],
+                        "size": geneMap[gene].length
+                    };
+                    if (geneBranch["size"] > domainMax) {
+                        x.domain([0, geneBranch["size"]]);
+                        domainMax = geneBranch["size"];
+                    }
+                    
+                    geneTree["children"].push(geneBranch);
+                    update(root);
+                } else {
+                    console.error("gene " + gene + " not found!");
+                }
+            }
             
             function getMutationDatum(id, gene, callback) {
-//                var chart = d3.select(".chart")
-//                .attr("width", width);
-//
-//                var x = d3.scale.linear()
-//                .range([0, width]);
 
                 var url = "http://www.cbioportal.org/webservice.do?cmd=getMutationData&genetic_profile_id=" + id + "&gene_list=" + gene;
 
@@ -42,27 +106,8 @@
                     geneMap[gene] = d3.tsv.parse(cleanTSV);
                     
                     console.log(gene, geneMap[gene].length);
-
-//                    x.domain([0, d3.max(geneMap[gene], function(d) { return d.start_position; })]);
-//
-//                    chart.attr("height", barHeight * geneMap[gene].length);
-//
-//                    var bar = chart.selectAll("g")
-//                    .data(geneMap[gene])
-//                    .enter().append("g")
-//                    .attr("transform", function(d, i) { return "translate(0," + i * barHeight + ")"; });
-//
-//                    bar.append("rect")
-//                    .attr("width", function(d) { return x(d.start_position); })
-//                    .attr("height", barHeight - 1);
-//
-//                    bar.append("text")
-//                    .attr("x", function(d) { return x(d.start_position) - 3; })
-//                    .attr("y", barHeight / 2)
-//                    .attr("dy", ".35em")
-//                    .text(function(d) { return d.start_position; });
                     if(callback) {
-                        callback();
+                        callback(id, gene);
                     }
                 })
                 
@@ -74,18 +119,128 @@
                 
             }
             
-            function getMutationData(id, genes, callback) {
+            function getMutationData(id, genes, callback, step) {
                 var nComplete = 0,
                     length = genes.length;
                 
                 for(i = 0; i < length; i++) {
-                    getMutationDatum(id, genes[i], function() {
+                    getMutationDatum(id, genes[i], function(id, gene) {
+                        if (step) {
+                            step(id, gene);
+                        }
                         nComplete++;
                         if (nComplete === length && callback) {
-                            callback();
+                            callback(id, gene);
                         }
                     })
                 }
+            }
+            
+            d3.select(self.frameElement).style("height", "800px");
+
+            function update(source) {
+
+                // Compute the new tree layout.
+                var nodes = tree.nodes(root).reverse(),
+                    links = tree.links(nodes);
+
+                // Normalize for fixed-depth.
+                nodes.forEach(function(d) { d.y = d.depth * 180; });
+
+                // Update the nodes…
+                var node = svg.selectAll("g.node")
+                .data(nodes, function(d) { return d.id || (d.id = ++i); });
+
+                // Enter any new nodes at the parent's previous position.
+                var nodeEnter = node.enter().append("g")
+                .attr("class", "node")
+                .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
+                .on("click", click);
+
+                nodeEnter.append("circle")
+                .attr("r", 1e-6)
+                .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+
+                nodeEnter.append("text")
+                .attr("x", function(d) { return d.children || d._children ? -10 : 10; })
+                .attr("dy", ".35em")
+                .attr("text-anchor", function(d) { return d.children || d._children ? "end" : "start"; })
+                .text(function(d) { return d.name + " " + d.size; })
+                .style("fill-opacity", 1e-6);
+
+                // Transition nodes to their new position.
+                var nodeUpdate = node.transition()
+                .duration(duration)
+                .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
+
+                nodeUpdate.select("circle")
+                .attr("r", function(d) { 
+                    if(d.size) {
+                        return x(d.size);
+                    } else {
+                        return 4.5;
+                    }
+                })
+                .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+
+                nodeUpdate.select("text")
+                .style("fill-opacity", 1);
+
+                // Transition exiting nodes to the parent's new position.
+                var nodeExit = node.exit().transition()
+                .duration(duration)
+                .attr("transform", function(d) { return "translate(" + source.y + "," + source.x + ")"; })
+                .remove();
+
+                nodeExit.select("circle")
+                .attr("r", 1e-6);
+
+                nodeExit.select("text")
+                .style("fill-opacity", 1e-6);
+
+                // Update the links…
+                var link = svg.selectAll("path.link")
+                .data(links, function(d) { return d.target.id; });
+
+                // Enter any new links at the parent's previous position.
+                link.enter().insert("path", "g")
+                .attr("class", "link")
+                .attr("d", function(d) {
+                    var o = {x: source.x0, y: source.y0};
+                    return diagonal({source: o, target: o});
+                });
+
+                // Transition links to their new position.
+                link.transition()
+                .duration(duration)
+                .attr("d", diagonal);
+
+                // Transition exiting nodes to the parent's new position.
+                link.exit().transition()
+                .duration(duration)
+                .attr("d", function(d) {
+                    var o = {x: source.x, y: source.y};
+                    return diagonal({source: o, target: o});
+                })
+                .remove();
+
+                // Stash the old positions for transition.
+                nodes.forEach(function(d) {
+                    d.x0 = d.x;
+                    d.y0 = d.y;
+                });
+            }
+
+            // Toggle children on click.
+            function click(d) {
+                if (d.children) {
+                    d._children = d.children;
+                    d.children = null;
+                } else {
+                    d.children = d._children;
+                    d._children = null;
+                }
+                update(d);
             }
             
             
