@@ -77,11 +77,13 @@
             var x = d3.scale.linear()
                 .range([0, 30]);
             
-            var geneMap = {},
+            var studyMap = {},
+                geneMap = {},
                 geneTree = {};
             
             var domainMax = 0;
             
+            getCancerStudies();
             
             root = geneTree;
             root.x0 = height / 2;
@@ -90,7 +92,21 @@
             update(root);
             
             
-            renderGenes("ov_tcga_mutations", ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"], 5);
+            renderGenes("ov_tcga", ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"], 5);
+            
+            function getCancerStudies(callback) {
+
+                var url = "http://www.cbioportal.org/webservice.do?cmd=getCancerStudies";
+
+                d3.tsv(url, function(data) {
+                    for(prop in data) {
+                        studyMap[data[prop].cancer_study_id] = data[prop];
+                    }
+                    if(callback) {
+                        callback();
+                    }
+                });
+            }
             
             function renderGenes(id, genes, num) {
                 geneTree["children"] = [];
@@ -138,7 +154,7 @@
             
             function getMutationDatum(id, gene, callback) {
 
-                var url = "http://www.cbioportal.org/webservice.do?cmd=getMutationData&genetic_profile_id=" + id + "&gene_list=" + gene;
+                var url = "http://www.cbioportal.org/webservice.do?cmd=getMutationData&genetic_profile_id=" + id + "_mutations&gene_list=" + gene;
 
                 d3.xhr(url).get(function (err, response) {
                     var dirtyTSV = response.responseText;
