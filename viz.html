@@ -1,10 +1,18 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <link href="c3/c3.min.css" type="text/css">
         <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
-        <script src="http://underscorejs.org/underscore-min.js"></script>
+        <script src="c3/c3.js"></script>
+<!--        <script src="http://underscorejs.org/underscore-min.js"></script>-->
+        <script src="js/fuzzyset.js"></script>
         <style>
 
+            body, html {
+                margin: 0;
+                font-family: "Avenir", sans-serif;
+                font-weight: 300;
+            }
             .node {
                 cursor: pointer;
                 -webkit-animation: fadein 2s;
@@ -21,9 +29,7 @@
 
             .node .label {
                 font: 1em;
-                font-family: "Avenir", sans-serif;
                 line-height: 2em;
-                font-weight: 300;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -48,11 +54,50 @@
                 from {opacity: 0}
                 to {opacity: 1}
             }
+            
+            .chart_container {
+                position: absolute;
+                top: 0;
+                width: 50%;
+                right: 0;
+                height: 100%;
+            }
+            
+            .chart {
+                height: 100%
+            }
 
+            .c3-legend-item {
+            }
+            
+            .c3-line {
+                fill-opacity: 0
+            }
+            
+            .domain {
+            }
+            
+            .gene circle {
+                fill-opacity: 0 !important;
+                fill: steelblue !important;
+                transition: stroke-width .2s fill-opacity .2s;
+            }
+            
+            .gene:hover circle {
+                stroke-width: 4px;
+            }
+            
+            .gene.active circle {
+                fill-opacity: 1 !important;
+            }
+                
         </style>
     </head>
     <body>
-        <svg class="chart"></svg>
+        <svg class="tree"></svg>
+        <div class="chart_container">
+            <div class="chart"></div>
+        </div>
         <script>
             var margin = {top: 20, right: 120, bottom: 20, left: 120},
                 width = 960 - margin.right - margin.left,
@@ -68,7 +113,7 @@
             var diagonal = d3.svg.diagonal()
                 .projection(function(d) { return [d.y, d.x]; });
             
-            var svg = d3.select("svg")
+            var svg = d3.select(".tree")
                 .attr("width", width + margin.right + margin.left)
                 .attr("height", height + margin.top + margin.bottom)
                 .append("g")
@@ -78,10 +123,17 @@
                 .range([0, 30]);
             
             var studyMap = {},
+                invStudyMap = {},
                 geneMap = {},
-                geneTree = {};
+                geneTree = {},
+                clinicalMap = {},
+                lClinicalArray = [];
             
             var domainMax = 0;
+            
+            function sortNumber(a,b) {
+                return a - b;
+            }
             
             getCancerStudies(function() {
                 root = geneTree;
@@ -93,6 +145,34 @@
                 renderGenes("ov_tcga", ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"], 5);
             });
             
+            var chart;
+            
+            var fuzzyStudies = FuzzySet();
+            
+            function getClinicalData(id, callback) {
+
+                var url = "http://www.cbioportal.org/webservice.do?cmd=getClinicalData&case_set_id=" + id + "_all";
+
+                d3.tsv(url, function(data) {
+                    for(prop in data) {
+                        clinicalMap[data[prop].CASE_ID] = data[prop];
+                        if(data[prop].DAYS_TO_DEATH !== "") {
+                            lClinicalArray.push(+Number(data[prop].DAYS_TO_DEATH));
+                        } else {
+                            lClinicalArray.push(-1);
+                        }
+                    }
+                    lClinicalArray.sort(sortNumber);
+                    if(callback) {
+                        callback();
+                    }
+                });
+                
+                function type(d) {
+                    d.DAYS_TO_DEATH = +d.DAYS_TO_DEATH; // coerce to number
+                    return d;
+                }
+            }
             
             function getCancerStudies(callback) {
 
@@ -101,9 +181,121 @@
                 d3.tsv(url, function(data) {
                     for(prop in data) {
                         studyMap[data[prop].cancer_study_id] = data[prop];
+                        invStudyMap[data[prop].name] = data[prop];
+                        fuzzyStudies.add(data[prop].name);
                     }
                     if(callback) {
                         callback();
+                    }
+                });
+            }
+            
+            function renderFuzzyGenes(name, genes, num) {
+                renderGenes(invStudyMap[fuzzyStudies.get(name)[0][1]].cancer_study_id, genes, num);
+            }
+            
+            function updateGraph(id, gene, dependent, independent) {
+                var geneArr = geneMap[gene],
+                    lGeneArr = [];
+                
+                for(i in geneArr) {
+                    var d2d = clinicalMap[geneArr[i].case_id].DAYS_TO_DEATH;
+                    if(d2d !== "") {
+                        lGeneArr.push(+Number(d2d));
+                    } else {
+                        lGeneArr.push(-1);
+                    }
+                }
+                lGeneArr.sort(sortNumber);
+                
+                if (dependent === "alive" && independent === "time") {
+                    var totalAlive = lGeneArr.length,
+                        persistAlive;
+                    for (i = 0; i < totalAlive; i++) {
+                        if(lGeneArr[i] > 0) {
+                            persistAlive = i + 1;
+                            break;
+                        }
+                    }
+
+                    var selectedX = [gene + "_x", 0],
+                        selectedY = [gene, 100],
+                        currentAlive = totalAlive;
+
+                    for (i = persistAlive; i < totalAlive; i++) {
+                        selectedX.push(lGeneArr[i]);
+                        selectedY.push(currentAlive/totalAlive * 100);
+                        currentAlive--;
+                    }
+                    
+                    chart.unload({
+                        ids: gene
+                    });
+                    
+                    var xsObj = {};
+                    xsObj[gene] = gene + "_x";
+                    
+                    chart.load({
+                        xs: xsObj,
+                        columns: [
+                            selectedX,
+                            selectedY
+                        ]
+                    }, 1000);
+                }
+                
+            }
+            
+            function renderGraph(id, genes, dependent, independent, yaxis, xaxis) {
+                if (dependent === "alive" && independent === "time") {
+                    var totalAlive = lClinicalArray.length,
+                        persistAlive;
+                    for (i = 0; i < totalAlive; i++) {
+                        if(lClinicalArray[i] > 0) {
+                            persistAlive = i + 1;
+                            break;
+                        }
+                    }
+
+                    var allX = ["All_x", 0],
+                        allY = ["All", 100],
+                        currentAlive = totalAlive;
+
+                    for (i = persistAlive; i < totalAlive; i++) {
+                        allX.push(lClinicalArray[i]);
+                        allY.push(currentAlive/totalAlive * 100);
+                        currentAlive--;
+                    }
+                }
+                
+                if(chart){
+                    if(chart.destroy) {
+                        chart.destroy();
+                    }
+                }
+                
+                chart = c3.generate({
+                    bindto: '.chart',
+                    data: {
+                        xs: {
+                            All: 'All_x'
+                        },
+                        columns: [
+                            allX,
+                            allY
+                        ],
+                        type: 'scatter'
+                    },
+                    axis: {
+                        x: {
+                            label: xaxis,
+                            tick: {
+                                fit: false
+                            }
+                        },
+                        y: {
+                            label: yaxis
+                        }
                     }
                 });
             }
@@ -113,7 +305,8 @@
                 geneTree["allgenes"] = [];
                 geneTree["name"] = studyMap[id].name;
                 
-                console.log(studyMap[id].name);
+                getClinicalData(id, function() {
+                }) 
                 
                 setTimeout( function() {
                     getMutationData(id, genes, function() {
@@ -129,9 +322,12 @@
                         }
                         
                         update(root);
-                        console.log("complete!");
+                        
+                        renderGraph(id, genes, "alive", "time", "Patients Alive","Time After Diagnoses (days)");
+                        
+//                        console.log("complete!");
                     }, addGeneNode);
-                }, 100);    
+                }, 500);    
             } 
             
             function addGeneNode(id, gene) {
@@ -141,6 +337,7 @@
                         "children": [],
                         "size": geneMap[gene].length
                     };
+                    geneBranch["gene"] = true;
                     if (geneBranch["size"] > domainMax) {
                         x.domain([0, geneBranch["size"]]);
                         domainMax = geneBranch["size"];
@@ -165,7 +362,7 @@
 
                     geneMap[gene] = d3.tsv.parse(cleanTSV);
                     
-                    console.log(gene, geneMap[gene].length);
+//                    console.log(gene, geneMap[gene].length);
                     if(callback) {
                         callback(id, gene);
                     }
@@ -205,7 +402,7 @@
                     links = tree.links(nodes);
 
                 // Normalize for fixed-depth.
-                nodes.forEach(function(d) { d.y = d.depth * 180; });
+                nodes.forEach(function(d) { d.y = d.depth * 300; });
 
                 // Update the nodes…
                 var node = svg.selectAll("g.node")
@@ -215,7 +412,13 @@
 
                 // Enter any new nodes at the parent's previous position.
                 var nodeEnter = node.enter().append("g")
-                .attr("class", "node")
+                .attr("class", function(d) { 
+                    if (d.gene) {
+                        return "node gene"
+                    } else {
+                        return "node"
+                    }
+                })
                 .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
                 .on("click", click);
 
@@ -225,7 +428,7 @@
 
                 var nodeLabel = nodeEnter.append("foreignObject")
                 .attr("class", "foreignObject")
-                .attr("width", "8em")
+                .attr("width", "14em")
                 .attr("height", "2em")
                 .attr("y", "-1em")
                 .attr("x", "2em")
@@ -236,6 +439,9 @@
                 
                 nodeLabel.append("span")
                 .attr("class", "name")
+                .attr("title", function(d) {
+                    return d.name;
+                })
                 .text(function(d) {
                     return d.name + " ";
                 })
@@ -267,6 +473,9 @@
                 .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
                 
                 nodeUpdate.select(".label .name")
+                .attr("title", function(d) {
+                    return d.name;
+                })
                 .text(function(d) {
                     return d.name + " ";
                 });
@@ -327,8 +536,22 @@
             }
 
             // Toggle children on click.
-            function click(d) {
-                if (d.children) {
+            function click(d, e) {
+                console.log(d);
+                if (d.gene) {
+                    if(d.active) {
+                        d3.select(this).classed("active", false);
+                        d["active"] = false;
+                        chart.unload({
+                            ids: d.name
+                        });
+                    } else {
+                        d3.select(this).classed("active", true);
+                        d["active"] = true;
+                        updateGraph("", d.name, "alive", "time");
+                    }
+                }
+                else if (d.children) {
                     d._children = d.children;
                     d.children = null;
                 } else {
