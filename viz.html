@@ -103,7 +103,12 @@
                         geneTree["allgenes"].sort(function(a, b) {
                             return b["size"] - a["size"];
                         });
-                        geneTree["children"] = geneTree["allgenes"].slice(0, num);
+                        if(num === 0) {
+                            geneTree["children"] = geneTree["allgenes"];
+                        } else {
+                            geneTree["children"] = geneTree["allgenes"].slice(0, num);
+                        }
+                        
                         update(root);
                         console.log("complete!");
                     }, addGeneNode);
