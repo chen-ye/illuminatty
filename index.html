@@ -132,20 +132,7 @@
         var intent = str.slice(7,x);
         return intent;
       }
-      function getGene(str){
-        gene = "NONE";
-        genes_list = ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"];
-        for (key in genes_list){
-          if(str.search(genes_list[key])!=-1){
-            return genes_list[key]
-          }
-        }
-        if(str in genes_list) {
-          console.log("hellya");
-        }
-        return gene;
-        
-      }
+      
       function getCancer(str){
         cancer_dict = {"Leukemia": "laml_tcga", "breast cancer": "brca_broad", "Ovarian": "ov_tcga", "Colorectal": "coadread_genentech", "Esophageal": "esca_broad", "Kidney": "kirc_tcga_pub", "Liver": "lihc_amc_prv", "Lung": "luad_tcga_pub", "Thyroid": "thca_tcga_pub", "Prostate": "prad_mskcc", "Skin": "skcm_broad"};
         keys_list = Object.keys(cancer_dict);
@@ -192,7 +179,7 @@ $.ajax({
 
               console.log(getCancer(canca));
 
-              
+
           
           
     //   var a = response.outcomes[0].intent;
