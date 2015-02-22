@@ -28,6 +28,10 @@
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
+            
+            .node .size {
+                color: grey;
+            }
 
             .link {
                 fill: none;
@@ -84,17 +88,32 @@
             root.y0 = 0;
             geneTree["name"] = "Ovarian Serous Cystadenocarcinoma (TCGA, Provisional)";
             update(root);
-            geneTree["children"] = [];
             
-            getMutationData("ov_tcga_mutations", ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"], function() {
-                x.domain([0, d3.max(geneTree["children"], function(d) { return d.size; })]);
+            
+            renderGenes("ov_tcga_mutations", ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"], 5);
+            
+            function renderGenes(id, genes, num) {
+                geneTree["children"] = [];
+                geneTree["allgenes"] = [];
                 
-                geneTree["children"].sort(function(a, b) {
-                    return b["size"] - a["size"];
-                });
-                update(root);
-                console.log("complete!");
-            }, addGeneNode);
+                setTimeout( function() {
+                    getMutationData(id, genes, function() {
+                        x.domain([0, d3.max(geneTree["allgenes"], function(d) { return d.size; })]);
+
+                        geneTree["allgenes"].sort(function(a, b) {
+                            return b["size"] - a["size"];
+                        });
+                        if(num === 0) {
+                            geneTree["children"] = geneTree["allgenes"];
+                        } else {
+                            geneTree["children"] = geneTree["allgenes"].slice(0, num);
+                        }
+                        
+                        update(root);
+                        console.log("complete!");
+                    }, addGeneNode);
+                }, 100);    
+            } 
             
             function addGeneNode(id, gene) {
                 if(gene) {
@@ -108,7 +127,9 @@
                         domainMax = geneBranch["size"];
                     }
                     
+                    geneTree["allgenes"].push(geneBranch);
                     geneTree["children"].push(geneBranch);
+                    
                     update(root);
                 } else {
                     console.error("gene " + gene + " not found!");
@@ -169,7 +190,9 @@
 
                 // Update the nodes…
                 var node = svg.selectAll("g.node")
-                .data(nodes, function(d) { return d.id || (d.id = ++i); });
+                .data(nodes, function(d) { 
+                    return d.id || (d.id = ++i); 
+                });
 
                 // Enter any new nodes at the parent's previous position.
                 var nodeEnter = node.enter().append("g")
@@ -187,15 +210,19 @@
                 .attr("height", "2em")
                 .attr("y", "-1em")
                 .attr("x", "2em")
-                
                 .append("xhtml:body")
                 .attr("class", "labelbody")
                 .append("div")
                 .attr("class", "label")
                 .text(function(d) {
-                    return d.name;
+                    return d.name + " ";
                 })
                 .attr("text-anchor", "middle")
+                .append("span")
+                .attr("class", "size")
+                .text(function(d) {
+                    return d.size;
+                });
 
                 // Transition nodes to their new position.
                 var nodeUpdate = node.transition()
