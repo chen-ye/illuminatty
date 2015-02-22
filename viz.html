@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+        <style>
+            .chart rect {
+                fill: steelblue;
+            }
+
+            .chart text {
+                fill: white;
+                font: 10px sans-serif;
+                text-anchor: end;
+            }
+        </style>
+    </head>
+    <body>
+        <svg class="chart"></svg>
+        <script>
+            var width = 420,
+                barHeight = 20;
+            
+            var geneMap = {};
+            
+            getMutationData("ucec_tcga_mutations", ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1"], function() {
+                console.log("complete!")
+            });
+            
+            function getMutationDatum(id, gene, callback) {
+//                var chart = d3.select(".chart")
+//                .attr("width", width);
+//
+//                var x = d3.scale.linear()
+//                .range([0, width]);
+
+                var url = "http://www.cbioportal.org/webservice.do?cmd=getMutationData&genetic_profile_id=" + id + "&gene_list=" + gene;
+
+                d3.xhr(url).get(function (err, response) {
+                    var dirtyTSV = response.responseText;
+                    var cleanTSV = dirtyTSV.split('\n').slice(1).join('\n');
+
+                    geneMap[gene] = d3.tsv.parse(cleanTSV);
+                    
+                    console.log(gene, geneMap[gene].length);
+
+//                    x.domain([0, d3.max(geneMap[gene], function(d) { return d.start_position; })]);
+//
+//                    chart.attr("height", barHeight * geneMap[gene].length);
+//
+//                    var bar = chart.selectAll("g")
+//                    .data(geneMap[gene])
+//                    .enter().append("g")
+//                    .attr("transform", function(d, i) { return "translate(0," + i * barHeight + ")"; });
+//
+//                    bar.append("rect")
+//                    .attr("width", function(d) { return x(d.start_position); })
+//                    .attr("height", barHeight - 1);
+//
+//                    bar.append("text")
+//                    .attr("x", function(d) { return x(d.start_position) - 3; })
+//                    .attr("y", barHeight / 2)
+//                    .attr("dy", ".35em")
+//                    .text(function(d) { return d.start_position; });
+                    if(callback) {
+                        callback();
+                    }
+                })
+                
+                function type(d) {
+                    d.start_position = +d.start_position; // coerce to number
+                    return d;
+                }
+                
+                
+            }
+            
+            function getMutationData(id, genes, callback) {
+                var nComplete = 0,
+                    length = genes.length;
+                
+                for(i = 0; i < length; i++) {
+                    getMutationDatum(id, genes[i], function() {
+                        nComplete++;
+                        if (nComplete === length && callback) {
+                            callback();
+                        }
+                    })
+                }
+            }
+            
+            
+        </script>
+    </body>
+</html>
