@@ -99,6 +99,7 @@
                 top: 0;
                 padding: 2%;
                 margin: 3em;
+                width: 20em;
             }
             
             .godBox {
@@ -194,11 +195,13 @@
             
             var intentMap = {
                 "Most_mutated_genes": function(outcome) {
-                    if(outcome.entities.nGenes.length > 0) {
+                    if(outcome.entities.nGenes) {
                         state.nGenes = outcome.entities.nGenes[0].value;
                     }
-                    
-                    if(outcome.entities.cancer.length > 0) {
+                    setTimeout(function() {
+                        $("#info").text("Displaying the " + state.nGenes + " most mutated genes in " + studyMap[state.id].name);
+                    }, 100)
+                    if(outcome.entities.cancer) {
                         renderFuzzyGenes(outcome.entities.cancer[0].value.replace("cancer", ""), state.genes, state.nGenes);
                     } else {
                         renderGenes(state.id, state.genes, state.nGenes);
@@ -207,12 +210,37 @@
                     
                     console.log(outcome);
                 },
-                "Least_mutated_genes": function(outcome) {}
+                "Least_mutated_genes": function(outcome) {},
+                "toggle_gene": function(outcome) {
+                    var gene;
+                    console.log(outcome);
+                    if(outcome.entities.gene) {
+                        var fGene = outcome.entities.gene[0].value;
+                        var gBranch = geneTree["children"];
+                        var gCandidates = FuzzySet();
+                        
+                        for(i = 0; i < gBranch.length; i++) {
+                            gCandidates.add(gBranch[i].name);
+                        }
+                        
+                        gene = gCandidates.get(fGene)[0][1];
+                        click(d3.select("." + gene).data()[0]);
+                      } else if (outcome.entities.genes) {
+                          gene = outcome.entities.genes[0].value;
+                          click(d3.select("." + gene).data()[0]);
+                          
+                      }
+                    $("#info").text("Toggling visualization of " + gene);
+                },
+                "Survival_rate": function(outcome) {
+                    $("#info").text("Calculating survival rate");
+                }
             };
             
             function search() {
-
+                $("#info").text("Processing...");
                 var name = document.getElementById("searchForm").elements["searchItem"].value;
+                document.getElementById("searchForm").elements["searchItem"].value = "";
                 var pattern = name.toLowerCase();
                 var targetId = "";
 
@@ -225,6 +253,7 @@
                     dataType: 'jsonp',
                     method: 'GET',
                     success: function(response) {
+                        $("#info").text("Complete!");
                         console.log(response.outcomes[0].intent);
 //                        console.log(response.outcomes[0].entities.cancer[0].value);
                         
@@ -366,7 +395,8 @@
                 
                 if (dependent === "alive" && independent === "time") {
                     var totalAlive = lGeneArr.length,
-                        persistAlive;
+                        persistAlive = 0,
+                        i = 0;
                     for (i = 0; i < totalAlive; i++) {
                         if(lGeneArr[i] > 0) {
                             persistAlive = i + 1;
@@ -378,7 +408,10 @@
                         selectedY = [gene, 100],
                         currentAlive = totalAlive;
 
+                    console.log(persistAlive, totalAlive);
+                    
                     for (i = persistAlive; i < totalAlive; i++) {
+                        console.log("meow", i, persistAlive);
                         selectedX.push(lGeneArr[i]);
                         selectedY.push(currentAlive/totalAlive * 100);
                         currentAlive--;
@@ -387,6 +420,8 @@
                     chart.unload({
                         ids: gene
                     });
+                    
+                    console.log(selectedX, selectedY);
                     
                     var xsObj = {};
                     xsObj[gene] = gene + "_x";
@@ -480,8 +515,7 @@
                         update(root);
                         
                         renderGraph(id, genes, "alive", "time", "Patients Alive","Time After Diagnoses (days)");
-                        
-//                        console.log("complete!");
+                        $("#info").text("Processing complete!");
                     }, addGeneNode);
                 }, 500);    
             } 
@@ -570,9 +604,9 @@
                 var nodeEnter = node.enter().append("g")
                 .attr("class", function(d) { 
                     if (d.gene) {
-                        return "node gene"
+                        return "node gene " + d.name;
                     } else {
-                        return "node"
+                        return "node";
                     }
                 })
                 .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
@@ -692,17 +726,18 @@
             }
 
             // Toggle children on click.
-            function click(d, e) {
+            function click(d) {
                 console.log(d);
                 if (d.gene) {
+                    console.log(d3.select('.'+d.name));
                     if(d.active) {
-                        d3.select(this).classed("active", false);
+                        d3.select('.'+d.name).classed("active", false);
                         d["active"] = false;
                         chart.unload({
                             ids: d.name
                         });
                     } else {
-                        d3.select(this).classed("active", true);
+                        d3.select('.'+d.name).classed("active", true);
                         d["active"] = true;
                         updateGraph("", d.name, "alive", "time");
                     }
