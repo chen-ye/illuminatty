@@ -7,22 +7,42 @@
 
             .node {
                 cursor: pointer;
+                -webkit-animation: fadein 2s;
+                -webkit-animation-fill-mode: backwards;
+                animation: fadein 2s;
+                animation-fill-mode: backwards;
             }
-
+            
             .node circle {
                 fill: #fff;
                 stroke: steelblue;
                 stroke-width: 1.5px;
             }
 
-            .node text {
-                font: 10px sans-serif;
+            .node .label {
+                font: 1em;
+                font-family: "Avenir", sans-serif;
+                line-height: 2em;
+                font-weight: 300;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
 
             .link {
                 fill: none;
 /*                stroke: #ccc;*/
 /*                stroke-width: 1.5px;*/
+            }
+            
+            @-webkit-keyframes fadein {
+                from {opacity: 0}
+                to {opacity: 1}
+            }
+            
+            @keyframes fadein {
+                from {opacity: 0}
+                to {opacity: 1}
             }
 
         </style>
@@ -161,12 +181,21 @@
                 .attr("r", 1e-6)
                 .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
 
-                nodeEnter.append("text")
-                .attr("x", function(d) { return d.children || d._children ? -10 : 10; })
-                .attr("dy", ".35em")
-                .attr("text-anchor", function(d) { return d.children || d._children ? "end" : "start"; })
-                .text(function(d) { return d.name + " " + d.size; })
-                .style("fill-opacity", 1e-6);
+                nodeEnter.append("foreignObject")
+                .attr("class", "foreignObject")
+                .attr("width", "8em")
+                .attr("height", "2em")
+                .attr("y", "-1em")
+                .attr("x", "2em")
+                
+                .append("xhtml:body")
+                .attr("class", "labelbody")
+                .append("div")
+                .attr("class", "label")
+                .text(function(d) {
+                    return d.name;
+                })
+                .attr("text-anchor", "middle")
 
                 // Transition nodes to their new position.
                 var nodeUpdate = node.transition()
@@ -183,8 +212,7 @@
                 })
                 .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
 
-                nodeUpdate.select("text")
-                .style("fill-opacity", 1);
+//                nodeUpdate.select("foreignObject").classed("active", true);
 
                 // Transition exiting nodes to the parent's new position.
                 var nodeExit = node.exit().transition()
