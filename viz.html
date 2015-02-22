@@ -3,6 +3,8 @@
     <head>
         <link href="c3/c3.min.css" type="text/css">
         <link rel="stylesheet" href="microphone/microphone.min.css">
+        <script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
+        <script src="microphone/microphone.min.js"></script>
         <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
         <script src="c3/c3.js"></script>
 <!--        <script src="http://underscorejs.org/underscore-min.js"></script>-->
@@ -92,17 +94,20 @@
                 fill-opacity: 1 !important;
             }
             
-            .godBox {
-                width: 50%;
+            #searchForm {
+                position: absolute;
+                top: 0;
                 padding: 2%;
-                border-radius: 10px;
-                margin: 24%;
+                margin: 3em;
+            }
+            
+            .godBox {
+                width: 80%;
                 font-size: 160%;
                 outline: none;
                 border: 2px black solid;
                 /*background-color: rgba(0,0,0,0.3);*/
                 color: black;
-                text-align: center;
             }
                 
         </style>
@@ -112,6 +117,138 @@
         <div class="chart_container">
             <div class="chart"></div>
         </div>
+        <form id="searchForm" action="javascript:search();">
+            <div class="input-group">
+                <input type="text" id="searchItem" class="godBox" placeholder="Query?">
+            </div>
+            <div id="info"></div>
+            <div id="error"></div>
+        </form>
+        <script>
+            var mic = new Wit.Microphone(document.getElementById("microphone"));
+            var info = function (msg) {
+                document.getElementById("info").innerHTML = msg;
+
+            };
+            var error = function (msg) {
+                document.getElementById("error").innerHTML = msg;
+            };
+            mic.onready = function () {
+                info("Microphone is ready to record");
+            };
+            mic.onaudiostart = function () {
+                info("Recording started");
+                error("");
+            };
+            mic.onaudioend = function () {
+                info("Recording stopped, processing started");
+            };
+
+            mic.onresult = function (intent, entities) {
+
+
+                var a = (intent);
+
+                if (a == "Most_mutated_genes") {
+                    console.log("It worked!!");
+                }
+                else {
+                    console.log("hahah i am gr88");
+                }
+
+                var r = kv("intent", intent);
+
+
+                getMutationDatum(1, entities, "cancer");
+
+
+                for (var k in entities) {
+                    var e = entities[k];
+
+
+                    if (!(e instanceof Array)) {
+                        r += kv(k, e.value);
+                    } else {
+                        for (var i = 0; i < e.length; i++) {
+                            r += kv(k, e[i].value);
+                        }
+                    }
+                }
+
+                document.getElementById("result").innerHTML = r;
+                return r;
+            };
+            mic.onerror = function (err) {
+                error("Error: " + err);
+            };
+            mic.onconnecting = function () {
+                info("Microphone is connecting");
+            };
+            mic.ondisconnected = function () {
+                info("Microphone is not connected");
+            };
+
+            mic.connect("AMMERMEZ4POS4KYONY6E45OSSPAXA555");
+            
+            var input = document.getElementById("searchItem");
+            
+            var intentMap = {
+                "Most_mutated_genes": function(outcome) {
+                    if(outcome.entities.nGenes.length > 0) {
+                        state.nGenes = outcome.entities.nGenes[0].value;
+                    }
+                    
+                    if(outcome.entities.cancer.length > 0) {
+                        renderFuzzyGenes(outcome.entities.cancer[0].value.replace("cancer", ""), state.genes, state.nGenes);
+                    } else {
+                        renderGenes(state.id, state.genes, state.nGenes);
+                    }
+                    
+                    
+                    console.log(outcome);
+                },
+                "Least_mutated_genes": function(outcome) {}
+            };
+            
+            function search() {
+
+                var name = document.getElementById("searchForm").elements["searchItem"].value;
+                var pattern = name.toLowerCase();
+                var targetId = "";
+
+                $.ajax({
+                    url: 'https://api.wit.ai/message?v=20150222',
+                    data: {
+                        'q':pattern,
+                        'access_token': 'AMMERMEZ4POS4KYONY6E45OSSPAXA555'
+                    },
+                    dataType: 'jsonp',
+                    method: 'GET',
+                    success: function(response) {
+                        console.log(response.outcomes[0].intent);
+//                        console.log(response.outcomes[0].entities.cancer[0].value);
+                        
+//                        console.log(response);
+
+//                        var canca = response.outcomes[0].entities.cancer[0].value;
+
+//                        console.log(getCancer(canca));
+                        intentMap[response.outcomes[0].intent](response.outcomes[0]);
+                    }
+                });
+
+
+
+
+            }
+            
+//            $("#godform").submit( function(event) {
+//                event.preventDefault();
+//                search();
+//            })
+//            
+            
+        </script>
         <script>
             var state = {};
             var margin = {top: 20, right: 120, bottom: 20, left: 120},
