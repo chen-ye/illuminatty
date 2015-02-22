@@ -10,6 +10,9 @@
     <div id="info"></div>
     <div id="error"></div>
     <script src="microphone/microphone.min.js"></script>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<!--        <script src="http://underscorejs.org/underscore-min.js"></script>-->
+        <script src="js/fuzzyset.js"></script>
 
     <script>
       var mic = new Wit.Microphone(document.getElementById("microphone"));
@@ -45,6 +48,7 @@
         }
 
         document.getElementById("result").innerHTML = r;
+        return r;
       };
       mic.onerror = function (err) {
         error("Error: " + err);
@@ -66,6 +70,32 @@
         }
         return k + "=" + v + "\n";
       }
+      function getIntent(str){
+        var x = str.indexOf('\n');
+        var intent = str.slice(7,x);
+        return intent;
+      }
+      function getGene(str){
+        gene = "NONE";
+        genes_list = ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"];
+        for(pot_gene in genes_list){
+          if(str.search(pot_gene) != -1){
+            return genes_list[pot_gene-1];
+          }
+        return gene;
+        }
+      }
+      function getCancer(str){
+        cancer_dict = {"Leukemia": "laml_tcga", "Breast": "brca_broad", "Ovarian": "ov_tcga", "Colorectal": "coadread_genentech", "Esophageal": "esca_broad", "Kidney": "kirc_tcga_pub", "Liver": "lihc_amc_prv", "Lung": "luad_tcga_pub", "Thyroid": "thca_tcga_pub", "Prostate": "prad_mskcc", "Skin": "skcm_broad"};
+        keys_list = Object.keys(cancer_dict);
+        for(key in keys_list){
+          if(str.search(key) != -1){
+            return cancer_dict[keys_list[key]]
+          }
+        return "none"
+        }
+      }  
+
     </script>
   </body>
   </html>
