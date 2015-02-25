@@ -110,6 +110,19 @@
                 /*background-color: rgba(0,0,0,0.3);*/
                 color: black;
             }
+            
+            .wit-microphone {
+                display: inline-block;
+                font-family: inherit;
+                text-align: center;
+                position: relative;
+                height: 2em;
+                width: 2em;
+            }
+            .mic {
+                font-size: 1em;
+                line-height: 1.5em;
+            }
                 
         </style>
     </head>
@@ -121,76 +134,46 @@
         <form id="searchForm" action="javascript:search();">
             <div class="input-group">
                 <input type="text" id="searchItem" class="godBox" placeholder="Query?">
+                <div id="microphone"></div>
             </div>
             <div id="info"></div>
             <div id="error"></div>
         </form>
         <script>
-            var mic = new Wit.Microphone(document.getElementById("microphone"));
-            var info = function (msg) {
-                document.getElementById("info").innerHTML = msg;
-
-            };
-            var error = function (msg) {
-                document.getElementById("error").innerHTML = msg;
-            };
-            mic.onready = function () {
-                info("Microphone is ready to record");
-            };
-            mic.onaudiostart = function () {
-                info("Recording started");
-                error("");
-            };
-            mic.onaudioend = function () {
-                info("Recording stopped, processing started");
-            };
-
-            mic.onresult = function (intent, entities) {
-
-
-                var a = (intent);
-
-                if (a == "Most_mutated_genes") {
-                    console.log("It worked!!");
-                }
-                else {
-                    console.log("hahah i am gr88");
-                }
-
-                var r = kv("intent", intent);
-
-
-                getMutationDatum(1, entities, "cancer");
-
-
-                for (var k in entities) {
-                    var e = entities[k];
-
-
-                    if (!(e instanceof Array)) {
-                        r += kv(k, e.value);
-                    } else {
-                        for (var i = 0; i < e.length; i++) {
-                            r += kv(k, e[i].value);
-                        }
-                    }
-                }
-
-                document.getElementById("result").innerHTML = r;
-                return r;
-            };
-            mic.onerror = function (err) {
-                error("Error: " + err);
-            };
-            mic.onconnecting = function () {
-                info("Microphone is connecting");
-            };
-            mic.ondisconnected = function () {
-                info("Microphone is not connected");
-            };
-
-            mic.connect("AMMERMEZ4POS4KYONY6E45OSSPAXA555");
-            
+//            var accessToken = "AMMERMEZ4POS4KYONY6E45OSSPAXA555";
+//            
+//            var mic = new Wit.Microphone(document.getElementById("microphone"));
+//            var info = function (msg) {
+//                document.getElementById("info").innerHTML = msg;
+//
+//            };
+//            var error = function (msg) {
+//                document.getElementById("error").innerHTML = msg;
+//            };
+//            mic.onready = function () {
+//                info("Microphone is ready to record");
+//            };
+//            mic.onaudiostart = function () {
+//                info("Recording started");
+//                error("");
+//            };
+//            mic.onaudioend = function () {
+//                info("Recording stopped, processing started");
+//            };
+//
+//            mic.onresult = respond;
+//            mic.onerror = function (err) {
+//                error("Error: " + err);
+//            };
+//            mic.onconnecting = function () {
+//                info("Microphone is connecting");
+//            };
+//            mic.ondisconnected = function () {
+//                info("Microphone is not connected");
+//            };
+//
+//                        mic.connect(accessToken);
+//            
             var input = document.getElementById("searchItem");
             
             var intentMap = {
@@ -237,6 +220,15 @@
                 }
             };
             
+            function respond (intent, entities) {
+                $("#info").text("Complete!");
+                console.log(intent);
+                intentMap[intent]({
+                    intent: intent,
+                    entities: entities
+                });
+            }
+            
             function search() {
                 $("#info").text("Processing...");
                 var name = document.getElementById("searchForm").elements["searchItem"].value;
@@ -253,29 +245,12 @@
                     dataType: 'jsonp',
                     method: 'GET',
                     success: function(response) {
-                        $("#info").text("Complete!");
-                        console.log(response.outcomes[0].intent);
-//                        console.log(response.outcomes[0].entities.cancer[0].value);
                         
-//                        console.log(response);
-
-//                        var canca = response.outcomes[0].entities.cancer[0].value;
-
-//                        console.log(getCancer(canca));
-                        intentMap[response.outcomes[0].intent](response.outcomes[0]);
+                        respond(response.outcomes[0].intent, response.outcomes[0].entities);
+                        
                     }
                 });
-
-
-
-
             }
-            
-//            $("#godform").submit( function(event) {
-//                event.preventDefault();
-//                search();
-//            })
-//            
             
         </script>
         <script>
@@ -336,12 +311,17 @@
             function getClinicalData(id, callback) {
 
                 var url = "http://www.cbioportal.org/webservice.do?cmd=getClinicalData&case_set_id=" + id + "_all";
-
+                console.log(id + " clinical data: " + url);
                 d3.tsv(url, function(data) {
                     for(prop in data) {
                         clinicalMap[data[prop].CASE_ID] = data[prop];
                         if(data[prop].DAYS_TO_DEATH !== "") {
-                            lClinicalArray.push(+Number(data[prop].DAYS_TO_DEATH));
+                            if(data[prop].DAYS_TO_DEATH) {
+                                lClinicalArray.push(+Number(data[prop].DAYS_TO_DEATH));
+                            } else {
+                                $("#info").text("Warning: this dataset lacks lifespan information");
+                                console.warn("dataset " + id + " lacks lifespan information")
+                            }
                         } else {
                             lClinicalArray.push(-1);
                         }
@@ -361,7 +341,7 @@
             function getCancerStudies(callback) {
 
                 var url = "http://www.cbioportal.org/webservice.do?cmd=getCancerStudies";
-
+                console.log("cancer studies: " + url);
                 d3.tsv(url, function(data) {
                     for(prop in data) {
                         studyMap[data[prop].cancer_study_id] = data[prop];
@@ -384,11 +364,17 @@
                     lGeneArr = [];
                 
                 for(i in geneArr) {
-                    var d2d = clinicalMap[geneArr[i].case_id].DAYS_TO_DEATH;
-                    if(d2d !== "") {
-                        lGeneArr.push(+Number(d2d));
+                    var caseid = geneArr[i].case_id,
+                        clinical = clinicalMap[caseid];
+                    if(clinical){
+                        var d2d = clinical.DAYS_TO_DEATH;
+                        if(d2d !== "") {
+                            lGeneArr.push(+Number(d2d));
+                        } else {
+                            lGeneArr.push(-1);
+                        }
                     } else {
-                        lGeneArr.push(-1);
+                        console.warn("could not find clinical data for case " + caseid);
                     }
                 }
                 lGeneArr.sort(sortNumber);
@@ -405,23 +391,18 @@
                     }
 
                     var selectedX = [gene + "_x", 0],
-                        selectedY = [gene, 100],
+                        selectedY = [gene, 1],
                         currentAlive = totalAlive;
-
-                    console.log(persistAlive, totalAlive);
                     
                     for (i = persistAlive; i < totalAlive; i++) {
-                        console.log("meow", i, persistAlive);
                         selectedX.push(lGeneArr[i]);
-                        selectedY.push(currentAlive/totalAlive * 100);
+                        selectedY.push(currentAlive/totalAlive);
                         currentAlive--;
                     }
                     
                     chart.unload({
                         ids: gene
                     });
-                    
-                    console.log(selectedX, selectedY);
                     
                     var xsObj = {};
                     xsObj[gene] = gene + "_x";
@@ -437,7 +418,8 @@
                 
             }
             
-            function renderGraph(id, genes, dependent, independent, yaxis, xaxis) {
+            function renderGraph(id, genes, dependent, independent, yaxis, xaxis, ymax, xmax) {
+                //todo: replace args with js obj config
                 if (dependent === "alive" && independent === "time") {
                     var totalAlive = lClinicalArray.length,
                         persistAlive;
@@ -449,12 +431,12 @@
                     }
 
                     var allX = ["All_x", 0],
-                        allY = ["All", 100],
+                        allY = ["All", 1],
                         currentAlive = totalAlive;
 
                     for (i = persistAlive; i < totalAlive; i++) {
                         allX.push(lClinicalArray[i]);
-                        allY.push(currentAlive/totalAlive * 100);
+                        allY.push(currentAlive/totalAlive );
                         currentAlive--;
                     }
                 }
@@ -465,7 +447,7 @@
                     }
                 }
                 
-                chart = c3.generate({
+                var chartConfig = {
                     bindto: '.chart',
                     data: {
                         xs: {
@@ -485,10 +467,34 @@
                             }
                         },
                         y: {
-                            label: yaxis
+                            label: yaxis,
+                            tick: {
+                                format: d3.format('%')
+                                //or format: function (d) { return '$' + d; }
+                            }
+                        }
+                    },
+                    tooltip: {
+                        format: {
+                            title: function (d) { return 'Day ' + d; },
+                            value: function (value, ratio, id) {
+                                var format = d3.format('%');
+                                return format(value) + " Patients Alive";
+                            }
+                            //            value: d3.format(',') // apply this format to both y and y2
                         }
                     }
-                });
+                };
+                
+                if (xmax) {
+                    chartConfig.axis.x.max = xmax;
+                }
+                
+                if (xmax) {
+                    chartConfig.axis.x.max = xmax;
+                } 
+                
+                chart = c3.generate(chartConfig);
             }
             
             function renderGenes(id, genes, num) {
@@ -514,7 +520,7 @@
                         
                         update(root);
                         
-                        renderGraph(id, genes, "alive", "time", "Patients Alive","Time After Diagnoses (days)");
+                        renderGraph(id, genes, "alive", "time", "% Patients Alive","Time After Diagnoses (days)", 100);
                         $("#info").text("Processing complete!");
                     }, addGeneNode);
                 }, 500);    
@@ -545,7 +551,7 @@
             function getMutationDatum(id, gene, callback) {
 
                 var url = "http://www.cbioportal.org/webservice.do?cmd=getMutationData&genetic_profile_id=" + id + "_mutations&gene_list=" + gene;
-
+                console.log(id + " " + gene + " mutation data: " + url);
                 d3.xhr(url).get(function (err, response) {
                     var dirtyTSV = response.responseText;
                     var cleanTSV = dirtyTSV.split('\n').slice(1).join('\n');
@@ -727,9 +733,7 @@
 
             // Toggle children on click.
             function click(d) {
-                console.log(d);
                 if (d.gene) {
-                    console.log(d3.select('.'+d.name));
                     if(d.active) {
                         d3.select('.'+d.name).classed("active", false);
                         d["active"] = false;
