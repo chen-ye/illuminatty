@@ -300,9 +300,11 @@
                 update(root);
                 
                 state.id = "ov_tcga";
-                state.genes = ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2"];
-                state.nGenes = 5;
-                renderGenes(state.id, state.genes, state.nGenes);
+                state.genes = ["BRCA1", "TP53", "BRCA2", "USH2A", "CSMD3", "FAT3", "LRP2", "LRP1B", "NF1", "TENM1", "FAT1", "AHNAK2", "LRRK2", "SI", "BAI3", "MYH4", "MYH1", "FLG2", "SYNE1" , "RNF213", "", "COL22A1", "TRIOBP", "CHD4", "NALCN", "PRKDC", "PPP1R3A", "STAB2"
+                ];
+                state.nGenes = 5   
+                '
+                '                renderGenes(state.id, state.genes, state.nGenes);
             });
             
             var chart;
@@ -598,7 +600,7 @@
                 var nodes = tree.nodes(root).reverse(),
                     links = tree.links(nodes);
 
-                // Normalize for fixed-depth.
+                // Normalize for fixed-depth.3
                 nodes.forEach(function(d) { d.y = d.depth * 300; });
 
                 // Update the nodes…
